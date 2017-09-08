@@ -118,6 +118,7 @@ struct dongle_state
 	int	  offset_tuning;
 	int	  direct_sampling;
 	int	  mute;
+	char	*antenna;
 	struct demod_state *demod_target;
 };
 
@@ -241,6 +242,7 @@ void usage(void)
 		"\t	enables low-leakage downsample filter\n"
 		"\t	size can be 0 or 9.  0 has bad roll off\n"
 		"\t[-A std/fast/lut/ale choose atan math (default: std)]\n"
+		"\t[-a ant   Name of antenna to use]\n"
 		//"\t[-C clip_path (default: off)\n"
 		//"\t (create time stamped raw clips, requires squelch)\n"
 		//"\t (path must have '\%s' and will expand to date_time_freq)\n"
@@ -1028,6 +1030,12 @@ static void *controller_thread_fn(void *arg)
 	verbose_set_sample_rate(dongle.dev, dongle.rate, 0);
 	fprintf(stderr, "Output at %u Hz.\n", demod.rate_in/demod.post_downsample);
 
+	/* Set the antenna */
+	if (verbosity)
+		fprintf(stderr, "verbose_set_antenna(%s\n)", dongle.antenna);
+	verbose_set_antenna(dongle.dev, dongle.antenna, 0);
+	fprintf(stderr, "Antenna set to '%s'\n", dongle.antenna);
+
 	SoapySDRKwargs args = {0};
 	while (!do_exit) {
 		safe_cond_wait(&s->hop, &s->hop_m);
@@ -1071,6 +1079,7 @@ void dongle_init(struct dongle_state *s)
 	s->offset_tuning = 0;
 	s->demod_target = &demod;
 	s->bandwidth = 0;
+	s->antenna = "Antenna B";
 }
 
 void demod_init(struct demod_state *s)
@@ -1211,8 +1220,11 @@ int main(int argc, char **argv)
 	output_init(&output);
 	controller_init(&controller);
 
-	while ((opt = getopt(argc, argv, "d:f:g:s:b:l:L:o:t:r:p:E:q:F:A:M:c:h:w:v")) != -1) {
+	while ((opt = getopt(argc, argv, "a:d:f:g:s:b:l:L:o:t:r:p:E:q:F:A:M:c:h:w:v")) != -1) {
 		switch (opt) {
+		case 'a':
+			dongle.antenna = optarg;
+			break;
 		case 'd':
 			dongle.dev_query = optarg;
 			break;
